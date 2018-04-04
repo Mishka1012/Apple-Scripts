@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AMApplicationBuild</key>
+	<string>428</string>
+	<key>AMApplicationVersion</key>
+	<string>2.7</string>
+	<key>AMDocumentVersion</key>
+	<string>2</string>
+	<key>actions</key>
+	<array>
+		<dict>
+			<key>action</key>
+			<dict>
+				<key>AMAccepts</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Optional</key>
+					<true/>
+					<key>Types</key>
+					<array>
+						<string>com.apple.applescript.object</string>
+					</array>
+				</dict>
+				<key>AMActionVersion</key>
+				<string>1.0.2</string>
+				<key>AMApplication</key>
+				<array>
+					<string>Automator</string>
+				</array>
+				<key>AMParameterProperties</key>
+				<dict>
+					<key>source</key>
+					<dict/>
+				</dict>
+				<key>AMProvides</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Types</key>
+					<array>
+						<string>com.apple.applescript.object</string>
+					</array>
+				</dict>
+				<key>ActionBundlePath</key>
+				<string>/System/Library/Automator/Run AppleScript.action</string>
+				<key>ActionName</key>
+				<string>Run AppleScript</string>
+				<key>ActionParameters</key>
+				<dict>
+					<key>source</key>
+					<string>on run	(*	--Finding out names of folders here	set theFolder to (choose folder with prompt "Select the Folder")	display dialog theFolder as string	*)	--setting folders here	set theGoProFolder to alias "Mishka's Archive 1:Videos:GoPro:"	set theArchiveFolder to alias "Mishka's Archive 1:Videos:GoPro Archive:"	--working with files	tell application "Finder"		--starting list of already converted files		if my existsOnComputer(theArchiveFolder) then			set convertedFileNameList to name of every file of theArchiveFolder		else			error "GoProArchive Folder Not Found"		end if		--renaming any files still there		if my existsOnComputer(theGoProFolder) then			--display notification "GoPro Folder Found"		else			error "GoPro Folder Not Found"		end if		--setting folders		set dailyFolders to every folder of theGoProFolder		--iterating through folders		repeat with dailyFolder in dailyFolders			display notification "Done"			--checking folders			if name of dailyFolder starts with "20" then								--saving the name				set dayName to name of dailyFolder				set dayName to my deleteExtraCharacters(dayName, "-")				--iterating through cam folders (as if there may be multiples)				set camFolders to every folder of dailyFolder				repeat with camFolder in camFolders					--Setting files					set videoFiles to every file of camFolder					set videoFiles to sort videoFiles by creation date					--starting the count					set videoNumber to 1					--iterating through video files					repeat with videoFile in videoFiles						--setting potential name						if name of videoFile ends with ".PNG" then							set potentialVideoFileName to (dayName &amp; "-" &amp; videoNumber as string) &amp; ".PNG"						else							set potentialVideoFileName to (dayName &amp; "-" &amp; videoNumber as string) &amp; ".mp4"						end if						--checking if files are already renamed						if name of videoFile starts with potentialVideoFileName then							--fixing the incorrect bs							(*							if name of videoFile ends with " incorrect" then								--setting the correct name								tell application "System Events" to set the name of videoFile to (potentialVideoFileName)							end if							*)							set fileName to name of videoFile							--start a list of sortables							if my stringUnique(fileName, convertedFileNameList) and fileName ends with ".mp4" then								--convert files that made it here using handbrake								set filePath to POSIX path of (videoFile as string)								--setting path to what can be read by shell								set filePath to my convertPath(filePath)								--setting output path								set outputPath to POSIX path of (theArchiveFolder as string)								set outputPath to my convertPath(outputPath)								--setting output settings								set handbrakeSettings to " -e x264  -q 20.0 -r 30 --pfr  -a 1,1 -E ffaac,copy:ac3 -B 160,160 -6 dpl2,none -R Auto,Auto -D 0.0,0.0 --audio-copy-mask aac,ac3,dtshd,dts,mp3 --audio-fallback ffac3 -f mp4 -X 3840 -Y 2160 --decomb=fast --loose-anamorphic --modulus 2 -m --x264-preset medium --h264-profile high --h264-level 4.0"								--setting command for shellscript								set shellCommand to "/usr/local/bin/HandBrakeCLI -i " &amp; filePath &amp; " -o " &amp; outputPath &amp; fileName &amp; handbrakeSettings								--converting file using HandBrakeCLI XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX								try									do shell script shellCommand								on error									--display dialog fileName								end try								--my doTerminalCommand(shellCommand)								--display dialog "File " &amp; fileName &amp; " is done! Continue?"							end if						else							(*							--try to rename files here							display dialog videoFile as string							display dialog potentialVideoFileName							--checking for correct order							display dialog name of videoFile as string							display dialog potentialVideoFileName							*)							--setting incorrect file names							--tell application "System Events" to set the name of videoFile to (potentialVideoFileName &amp; " incorrect.mp4")							--renaming files
+							set potentialFile to file at path...
+							repeat while existsOnComputer(potentialFile)
+								set videoNumber to videoNumber + 1
+								set potentialVideoFileName to (dayName &amp; "-" &amp; videoNumber as string) &amp; ".mp4"
+							end repeat
+							tell application "System Events" to set the name of videoFile to (potentialVideoFileName)						end if						--adding one to video number						set videoNumber to videoNumber + 1					end repeat				end repeat			end if		end repeat	end tell	display notification "Done"end runon existsOnComputer(theFile)	tell application "System Events"		if exists theFile then			return true		else			return false		end if	end tellend existsOnComputeron stringUnique(str, stringList)	--iteratest trough the list to see if the string matches	if stringList contains str then		return false	end if	return trueend stringUniqueon convertPath(pathOlogy)	set pathOlogy to my changChar(pathOlogy, " ", "\\ ")	set pathOlogy to my changChar(pathOlogy, "'", "\\'")	return pathOlogyend convertPathon changChar(str, chrs, delims)	tell AppleScript		set oldTIDs to text item delimiters		set text item delimiters to characters of chrs		set TIs to text items of str		set text item delimiters to delims		set str to TIs as string		set text item delimiters to oldTIDs	end tell	return strend changCharon doTerminalCommand(terminalCommand)	tell application "System Events" to do shell script terminalCommandend doTerminalCommandon deleteExtraCharacters(str, chars)	--saving old delimiters	set theOldDelimiters to AppleScript's text item delimiters	--setting new delimiters	set AppleScript's text item delimiters to {chars}	--getting parts of string	set stringParts to (every text item in str) as list	--resetting text delimiters	set AppleScript's text item delimiters to ""	--setting text delimiters back to normal	set AppleScript's text item delimiters to theOldDelimiters	--reuniting string parts	set stringOnly to stringParts as string	--returning clean string	return stringOnlyend deleteExtraCharacters</string>
+				</dict>
+				<key>BundleIdentifier</key>
+				<string>com.apple.Automator.RunScript</string>
+				<key>CFBundleVersion</key>
+				<string>1.0.2</string>
+				<key>CanShowSelectedItemsWhenRun</key>
+				<false/>
+				<key>CanShowWhenRun</key>
+				<true/>
+				<key>Category</key>
+				<array>
+					<string>AMCategoryUtilities</string>
+				</array>
+				<key>Class Name</key>
+				<string>RunScriptAction</string>
+				<key>IgnoresInput</key>
+				<true/>
+				<key>InputUUID</key>
+				<string>0D0C1458-EAE5-4CCF-81CA-B7685FD1B5D8</string>
+				<key>Keywords</key>
+				<array>
+					<string>Run</string>
+				</array>
+				<key>OutputUUID</key>
+				<string>968467CA-A2EB-465F-B393-7B4783E83B4E</string>
+				<key>UUID</key>
+				<string>BD0D3EED-6F01-4189-BAD6-90510013E57F</string>
+				<key>UnlocalizedApplications</key>
+				<array>
+					<string>Automator</string>
+				</array>
+				<key>arguments</key>
+				<dict>
+					<key>0</key>
+					<dict>
+						<key>default value</key>
+						<string>on run {input, parameters}
+	
+	(* Your script goes here *)
+	
+	return input
+end run</string>
+						<key>name</key>
+						<string>source</string>
+						<key>required</key>
+						<string>0</string>
+						<key>type</key>
+						<string>0</string>
+						<key>uuid</key>
+						<string>0</string>
+					</dict>
+				</dict>
+				<key>isViewVisible</key>
+				<true/>
+				<key>location</key>
+				<string>378.500000:983.000000</string>
+				<key>nibPath</key>
+				<string>/System/Library/Automator/Run AppleScript.action/Contents/Resources/Base.lproj/main.nib</string>
+			</dict>
+			<key>isViewVisible</key>
+			<true/>
+		</dict>
+	</array>
+	<key>connectors</key>
+	<dict/>
+	<key>workflowMetaData</key>
+	<dict>
+		<key>workflowTypeIdentifier</key>
+		<string>com.apple.Automator.application</string>
+	</dict>
+</dict>
+</plist>
